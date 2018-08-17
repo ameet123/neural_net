@@ -1,22 +1,21 @@
 import numpy as np
 import pandas as pd
 from keras import activations
-from keras.layers import Dense,Dropout
+from keras.layers import Dense
 from keras.models import Sequential
-
+from sklearn.preprocessing import MinMaxScaler
+np.random.seed(10)
 cols = ['Sex', 'len', 'diameter', 'ht', 'whole weight', 'shucked wt', 'viscera wt', 'shell wt', 'rings']
 df = pd.read_csv("data\\abalone.data", names=cols)
 # Pre processing
 # convert sex to categorical and normalize
 df['Sex'] = df['Sex'].factorize()[0]
 
-from sklearn.preprocessing import MinMaxScaler
+
 
 min_max = MinMaxScaler()
 normDF = pd.DataFrame(min_max.fit_transform(df), columns=df.columns)
 
-# normDF = (df - df.min()) / (df.max() - df.min())
-# normDF.rings = df.rings
 print("Records in set:{}".format(normDF.shape[0]))
 
 X = normDF.values[:, 0:8]
