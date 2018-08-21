@@ -4,11 +4,14 @@ higher epoch of 250 helps to improve as well.
 smaller batchsize helps
 b=25 => accuracy on 1: 21
 b=1000 => accuracy on 1:12
+
 '''
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from keras.layers import Dense, Dropout
+from keras.layers import Dense
 from keras.models import Sequential
+from pandas_ml import ConfusionMatrix
 from sklearn.cross_validation import train_test_split
 from sklearn.metrics import confusion_matrix
 from sklearn.preprocessing import MinMaxScaler
@@ -48,7 +51,7 @@ model.add(Dense(1, activation='sigmoid', kernel_initializer='normal'))
 # Compile
 model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 # fit
-model.fit(X_train, Y_train, batch_size=1000, epochs=250, verbose=0)
+model.fit(X_train, Y_train, batch_size=25, epochs=250, verbose=0)
 # Evaluation
 scores = model.evaluate(X_test, Y_test)
 print("loss={} {}={}  ".format(scores[0], model.metrics_names[1], scores[1]))
@@ -58,3 +61,9 @@ Y_pred = np.rint(model.predict(X_test))
 
 matrix = confusion_matrix(Y_test, Y_pred)
 print(matrix)
+
+print("Shape of Y-test:{} pred:{}".format(Y_test.shape, Y_pred.shape))
+cm = ConfusionMatrix(Y_test.reshape(Y_test.size), Y_pred.reshape(Y_pred.size))
+print(cm)
+cm.plot()
+plt.show()
