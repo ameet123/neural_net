@@ -4,20 +4,12 @@ import numpy as np
 import pandas as pd
 from keras.layers import Dense, Dropout
 from keras.models import Sequential
-from sklearn.cross_validation import train_test_split
+from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix
 from sklearn.preprocessing import StandardScaler, RobustScaler, MaxAbsScaler, MinMaxScaler
 
-
-def readBinary(file, scalar_x, label_pos):
-    dataDF = pd.read_csv(file, sep=',')
-    x_DF = dataDF.drop(dataDF.columns[[label_pos]], axis=1)
-    y_DF = dataDF.iloc[:, label_pos].to_frame()
-    x_DF = pd.DataFrame(scalar_x.fit_transform(x_DF), columns=x_DF.columns)
-    print(x_DF.head())
-    print(y_DF.head())
-    return x_DF.values.astype('float32'), y_DF.values
-
+import seaborn as sn
+import matplotlib.pyplot as plt
 
 def readNp(file, scalarX, label_pos):
     data = np.loadtxt(file, delimiter=',', skiprows=1)
@@ -31,13 +23,15 @@ def readNp(file, scalarX, label_pos):
     return X_train, X_test, Y_train, Y_test
 
 
+from numpy.random import seed
+seed(42)
+from tensorflow import set_random_seed
+set_random_seed(42)
 iterations = 200
 batch_size = 1000
 scalarX = RobustScaler()
 train_file = "data\eye_state.csv"
 X_train, X_test, Y_train, Y_test = readNp(train_file, scalarX, 14)
-print("X rows:{} features:{} Y rows:{}".format(X_train.shape[0], X_train.shape[1], Y_train.shape[0]))
-
 
 def define_model(input_dim, in_neurons, out_neurons, hidden_dim, num_hidden_layer, is_dropout, output_act,
                  other_act='relu'):
@@ -49,15 +43,10 @@ def define_model(input_dim, in_neurons, out_neurons, hidden_dim, num_hidden_laye
         model.add(Dense(hidden_dim, kernel_initializer='normal', activation=other_act))
         if is_dropout:
             model.add(Dropout(0.2))
-    print("Adding output layer.")
     model.add(Dense(out_neurons, kernel_initializer='normal', activation=output_act))
     return model
 
-
-print("Shape of X:{}".format(X_train.shape))
-model = define_model(X_train.shape[1], 256, 1, 128, 20, True, 'sigmoid')
-
-model.summary()
+model = define_model(X_train.shape[1], 128, 1, 64, 10, True, 'sigmoid')
 
 # Compile
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
@@ -66,8 +55,7 @@ model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy']
 from sklearn.utils import class_weight
 
 class_weights = class_weight.compute_class_weight('balanced', np.unique(Y_train), Y_train)
-history = model.fit(X_train, Y_train, batch_size=batch_size, epochs=iterations,
-                    class_weight=class_weights, verbose=0)
+history = model.fit(X_train, Y_train, batch_size=batch_size, epochs=iterations, class_weight=class_weights, verbose=0)
 
 # Evaluation
 start = timer()
@@ -76,6 +64,13 @@ print("Model evaluation done:{} sec.".format(round(timer() - start, 2)))
 print('Test loss:{} accuracy:{}', score[0], score[1])
 
 print(model.predict(X_test))
-Y_pred = model.predict(X_test).astype(int)
+Y_pred = np.rint(model.predict(X_test))
 matrix = confusion_matrix(Y_test, Y_pred)
 print(matrix)
+# Visualize matrix
+
+cm_df = pd.DataFrame(matrix,index=[ i for i in "01"],columns=[i for i in "01"])
+sn.set(font_scale=1.4)
+sn_plot = sn.heatmap(cm_df,annot=True,annot_kws={"size":16}, fmt='g')
+# plt.savefig('robust_scaling_NN_heatmap.png')
+plt.show()

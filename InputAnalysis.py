@@ -55,15 +55,6 @@ fig.suptitle("Var-0 vs. Var-1\n", fontsize=12)
 title_array=["Unscaled data","After standard scaling (zoomed in)","After robust scaling (zoomed in)"]
 set_x_format(ax,[X,X1,X2],title_array)
 
-# ax[0].scatter(X[:, 0], X[:, 1], color=np.where(y_full > 0, 'r', 'b'))
-# ax[1].scatter(X1[:, 0], X1[:, 1], color=np.where(y_full > 0, 'r', 'b'))
-# ax[2].scatter(X2[:, 0], X2[:, 1], color=np.where(y_full > 0, 'r', 'b'))
-# for a in ax:
-#     set_x_format(a)
-# ax[0].set_title("Unscaled data", fontsize=12)
-# ax[1].set_title("After standard scaling (zoomed in)", fontsize=12)
-# ax[2].set_title("After robust scaling (zoomed in)", fontsize=12)
-
 # for the scaled data, we zoom in to the data center (outlier can't be seen!)
 for a in ax[1:]:
     a.set_xlim(-3, 3)
