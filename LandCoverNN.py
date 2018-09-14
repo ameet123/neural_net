@@ -1,14 +1,12 @@
 from timeit import default_timer as timer
 
+import keras
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import seaborn as sn
 from keras.layers import Dense, Dropout
 from keras.models import Sequential
 from numpy.random import seed
-from sklearn.metrics import confusion_matrix
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import RobustScaler
 from sklearn.utils import class_weight
 
@@ -19,16 +17,21 @@ set_random_seed(42)
 
 
 # Functions
-def readNp(file, scalarX, label_pos):
-    data = np.loadtxt(file, delimiter=',', skiprows=1)
-    X = data[:, 0:label_pos]
-    Y = data[:, label_pos]
-    scalarX = scalarX.fit(X)
-    X = scalarX.transform(X)
-    x_train, x_test, y_train, y_test = train_test_split(X, Y, test_size=0.2, random_state=7)
-    y_train = y_train.astype(int)
-    y_test = y_test.astype(int)
-    return x_train, x_test, y_train, y_test, class_weight.compute_class_weight('balanced', np.unique(y_train), y_train)
+def readX_Y(file, scalar_x, label_col):
+    dataDF = pd.read_csv(file, sep=',')
+    uniq_classes = dataDF[label_col].unique().size
+    print("Records:{} features:{}".format(dataDF.shape[0], dataDF.shape[1] - 1))
+    # Get X and Y separately,
+    x_DF = dataDF.iloc[:, 1:]
+    y_DF = dataDF.iloc[:, 0].to_frame()
+    # x_DF = pd.DataFrame(scalar_x.fit_transform(x_DF), columns=x_DF.columns)
+    y_DF[label_col] = y_DF[label_col].factorize()[0]
+    # one hot encoding of labels.
+    y_train_arr = keras.utils.to_categorical(y_DF.values, y_DF[label_col].unique().size).astype(int)
+    x_train_arr = x_DF.values
+    c_wt = class_weight.compute_class_weight('balanced', [0, 1, 2, 3, 4, 5], [y.argmax() for y in y_train_arr])
+    print("Class wth:{}".format(c_wt))
+    return x_train_arr, y_train_arr, uniq_classes, c_wt
 
 
 def define_model(input_dim, in_neurons, out_neurons, hidden_dim, num_hidden_layer, is_dropout, output_act,
@@ -42,8 +45,9 @@ def define_model(input_dim, in_neurons, out_neurons, hidden_dim, num_hidden_laye
         if is_dropout:
             model.add(Dropout(0.2))
     model.add(Dense(out_neurons, kernel_initializer='normal', activation=output_act))
-    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+    model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
     return model
+
 
 # Visualize loss history
 def plot_loss_history(plot_file, history):
@@ -59,36 +63,43 @@ def plot_loss_history(plot_file, history):
     plt.xlabel('Epoch')
     plt.ylabel('Loss/Accuracy')
     plt.grid()
-    plt.savefig('eye_state_test_train_loss_acc.png')
+    plt.savefig(plot_file)
     plt.clf()
 
+
 # Global Variables
-iterations = 200
+iterations = 100
 batch_size = 1000
 scalarX = RobustScaler()
-train_file = "data\eye_state.csv"
+OUTPUT_POS = 0
+OUTPUT_COL = 'class'
+train_file = "data\\training.csv"
+OUTPUT_ACTIVATION = 'softmax'
+INUPUT_NEURONS = 256
+HIDDEN_NEURONS = 128
+HIDDEN_LAYERS = 10
 
 # Execution
-X_train, X_test, Y_train, Y_test, class_weights = readNp(train_file, scalarX, 14)
-model = define_model(X_train.shape[1], 128, 1, 64, 10, True, 'sigmoid')
-# class_weights = class_weight.compute_class_weight('balanced', np.unique(Y_train), Y_train)
+X_train, Y_train, uniq_classes, train_class_weights = readX_Y(train_file, scalarX, OUTPUT_COL)
+print("Number of uniq classes:{}".format(uniq_classes))
+model = define_model(X_train.shape[1], INUPUT_NEURONS, uniq_classes, HIDDEN_NEURONS, HIDDEN_LAYERS, True,
+                     OUTPUT_ACTIVATION)
+
+# Test
+test_file = "data\\testing.csv"
+scalar_test_X = RobustScaler()
+X_test, Y_test, uniq_test_classes, test_classes = readX_Y(test_file, scalar_test_X, OUTPUT_COL)
+
 start = timer()
-history = model.fit(X_train, Y_train, batch_size=batch_size, epochs=iterations, class_weight=class_weights,
+# class_weight=train_class_weights
+history = model.fit(X_train, Y_train, batch_size=batch_size, epochs=iterations,
                     validation_data=(X_test, Y_test), verbose=0)
-print("NN Model fit in: {} sec.".format(round(timer() - start,2)))
+print("NN Model fit in: {} sec.".format(round(timer() - start, 2)))
 
-plot_loss_history('eye_state_test_train_loss_acc.png', history)
-
+plot_loss_history('LandCover_test_train_loss_acc.png', history)
+#
 # Evaluation
 start = timer()
 score = model.evaluate(X_test, Y_test, verbose=0)
 print("Model evaluation done:{} sec. Test loss:{} accuracy:{}".format(round(timer() - start, 2), score[0], score[1]))
 Y_pred = np.rint(model.predict(X_test))
-matrix = confusion_matrix(Y_test, Y_pred)
-print(matrix)
-# Visualize matrix
-cm_df = pd.DataFrame(matrix, index=[i for i in "01"], columns=[i for i in "01"])
-sn.set(font_scale=1.4)
-sn_plot = sn.heatmap(cm_df, annot=True, annot_kws={"size": 14}, fmt='g')
-plt.title("Confusion Matrix: Eye State")
-plt.savefig('robust_scaling_NN_heatmap.png')
