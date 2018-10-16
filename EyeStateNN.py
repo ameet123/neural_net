@@ -11,7 +11,7 @@ from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import RobustScaler
 from sklearn.utils import class_weight
-
+from sklearn.model_selection import learning_curve
 seed(42)
 from tensorflow import set_random_seed
 
@@ -25,6 +25,9 @@ def readNp(file, scalarX, label_pos):
     Y = data[:, label_pos]
     scalarX = scalarX.fit(X)
     X = scalarX.transform(X)
+    transformed = np.column_stack([X,Y])
+
+    np.savetxt("foo.csv", transformed, delimiter=",")
     x_train, x_test, y_train, y_test = train_test_split(X, Y, test_size=0.2, random_state=7)
     y_train = y_train.astype(int)
     y_test = y_test.astype(int)
@@ -66,7 +69,7 @@ def plot_loss_history(plot_file, history):
 iterations = 200
 batch_size = 1000
 scalarX = RobustScaler()
-train_file = "data\eye_state.csv"
+train_file = "data\\foo.csv"
 
 # Execution
 X_train, X_test, Y_train, Y_test, class_weights = readNp(train_file, scalarX, 14)
