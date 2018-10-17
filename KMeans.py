@@ -63,8 +63,14 @@ kmDF['real'] = dataDF.iloc[0]
 
 land_score = metrics.adjusted_rand_score(Y, km.labels_)
 land_mutual_info_score = metrics.adjusted_mutual_info_score(Y, km.labels_)
+homogeneity_score = metrics.homogeneity_score(Y, km.labels_)
+completeness_score = metrics.completeness_score(Y, km.labels_)
+v_score = metrics.v_measure_score(Y, km.labels_)
+fowlkes_mallows_score = metrics.fowlkes_mallows_score(Y, km.labels_)
+
 print(
-    "Land Cover kmeans  AdjustedRand Index:{} Adjusted Mutual Info score:{}".format(land_score, land_mutual_info_score))
+    "Land Cover kmeans\n\tAdjustedRand Index:{}\n\tAdjusted Mutual Info score:{}\n\tHomogeneity score:{}\n\tCompleteness score:{}\n\tV-measure:{}".
+        format(land_score, land_mutual_info_score, homogeneity_score, completeness_score, v_score))
 
 # Cluster name mapping
 colors = ['gold', 'yellowgreen', 'lightcoral', 'lightskyblue', 'cyan', 'red']
@@ -87,7 +93,7 @@ for cluster in range(N_CLUSTERS):
     explode = np.array([0.2 if x == np.argmax(count) else 0 for x in range(count.size)])
     pie = plt.pie(count, explode=explode, shadow=True, startangle=140, colors=colors)
     if isLegend:
-        fig.legend(pie[0], uniq_vals, loc="lower left",  fontsize=9, frameon=False)
+        fig.legend(pie[0], uniq_vals, loc="lower left", fontsize=9, frameon=False)
         isLegend = False
     plt.title("[{}] -> {}".format(cluster, common_val), fontsize=10)
     y = y + 1
